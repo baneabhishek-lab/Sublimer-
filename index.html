@@ -190,6 +190,42 @@
       font-weight: 700;
     }
 
+    .btn-social {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--macho-yellow);
+      border-radius: 6px;
+      font-weight: 800;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-google {
+      background: #fff;
+      color: var(--text-dark);
+      border-color: #dadce0;
+    }
+    .btn-google:hover {
+      background: #f8f9fa;
+      border-color: var(--macho-pink);
+    }
+
+    .btn-facebook {
+      background: #1877f2;
+      color: #fff;
+      border-color: #1877f2;
+    }
+    .btn-facebook:hover {
+      background: #0a66c2;
+      border-color: var(--macho-pink);
+    }
+
     .profile-avatar {
       width: 100%;
       aspect-ratio: 1;
@@ -479,6 +515,30 @@
       background: #fff;
     }
 
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 16px 0;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--macho-yellow);
+    }
+
+    .auth-socials {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
     .auth-message {
       margin-top: 10px;
       font-weight: 700;
@@ -702,6 +762,23 @@
             <button id="signupModeBtn" type="button" onclick="setAuthMode('signup')">Sign Up</button>
           </div>
 
+          <div class="auth-socials">
+            <button type="button" class="btn-social btn-google" onclick="signInWithGoogle()" id="googleBtn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+              </svg>
+              Continue with Google
+            </button>
+            <button type="button" class="btn-social btn-facebook" onclick="signInWithFacebook()" id="facebookBtn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+              Continue with Facebook
+            </button>
+          </div>
+
+          <div class="auth-divider">OR</div>
+
           <form class="auth-form" id="authForm">
             <label class="sr-only" for="authEmail">Email</label>
             <input type="email" id="authEmail" placeholder="Email address" required />
@@ -725,7 +802,10 @@
       createUserWithEmailAndPassword,
       signInWithEmailAndPassword,
       signOut,
-      onAuthStateChanged
+      onAuthStateChanged,
+      GoogleAuthProvider,
+      FacebookAuthProvider,
+      signInWithPopup
     } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
 
     const firebaseConfig = {
@@ -739,6 +819,9 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+
+    const googleProvider = new GoogleAuthProvider();
+    const facebookProvider = new FacebookAuthProvider();
 
     const profileView = document.getElementById('profileView');
     const communitiesView = document.getElementById('communitiesView');
@@ -893,6 +976,28 @@
       }
     };
 
+    window.signInWithGoogle = async function() {
+      try {
+        setAuthMessage('Signing in with Google...');
+        const result = await signInWithPopup(auth, googleProvider);
+        setAuthMessage(`Welcome ${result.user.displayName || result.user.email}!`);
+        switchMainTab('profile');
+      } catch (err) {
+        setAuthMessage(err.message, true);
+      }
+    };
+
+    window.signInWithFacebook = async function() {
+      try {
+        setAuthMessage('Signing in with Facebook...');
+        const result = await signInWithPopup(auth, facebookProvider);
+        setAuthMessage(`Welcome ${result.user.displayName || result.user.email}!`);
+        switchMainTab('profile');
+      } catch (err) {
+        setAuthMessage(err.message, true);
+      }
+    };
+
     authForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = authEmail.value.trim();
@@ -908,6 +1013,7 @@
           setAuthMessage('Account created successfully.');
         }
         authForm.reset();
+        switchMainTab('profile');
       } catch (err) {
         setAuthMessage(err.message, true);
       }
@@ -915,7 +1021,7 @@
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        userNameEl.textContent = user.email || 'Signed in user';
+        userNameEl.textContent = user.displayName || user.email || 'Signed in user';
         userStatusEl.textContent = 'Authenticated via Firebase';
         logoutBtn.hidden = false;
         setAuthMessage(`Signed in as ${user.email}`);
