@@ -234,6 +234,41 @@
       border: 2px solid var(--macho-pink);
       background: #e2e8f0;
       margin-bottom: 10px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .profile-avatar:hover { opacity: 0.8; }
+
+    .avatar-upload {
+      position: relative;
+      margin-bottom: 10px;
+    }
+
+    .avatar-upload input[type="file"] {
+      display: none;
+    }
+
+    .avatar-upload label {
+      display: block;
+      cursor: pointer;
+    }
+
+    .upload-progress {
+      width: 100%;
+      height: 4px;
+      background: #e0e0e0;
+      border-radius: 2px;
+      margin-bottom: 8px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .upload-progress.active { display: block; }
+    .upload-progress-bar {
+      height: 100%;
+      background: var(--macho-pink);
+      width: 0%;
+      transition: width 0.3s;
     }
 
     .user-name {
@@ -307,6 +342,37 @@
     }
     .scrap-form textarea:focus { border-color: var(--macho-pink); }
 
+    .scrap-form-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .scrap-form-actions button {
+      flex: 1;
+    }
+
+    .btn-upload-image {
+      background: var(--macho-yellow);
+      color: var(--text-dark);
+      border: 2px solid var(--macho-yellow);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: 800;
+      min-height: 40px;
+      cursor: pointer;
+    }
+    .btn-upload-image:hover { background: var(--macho-yellow-light); }
+
+    .scrap-image-preview {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border: 2px solid var(--macho-yellow);
+    }
+
     .scrap-list {
       display: flex;
       flex-direction: column;
@@ -320,6 +386,15 @@
       border-left: 4px solid var(--macho-pink);
       border-radius: 8px;
       padding: 12px;
+    }
+
+    .scrap-item img {
+      width: 100%;
+      max-height: 250px;
+      object-fit: cover;
+      border-radius: 6px;
+      margin: 8px 0;
+      border: 1px solid var(--macho-yellow);
     }
 
     .scrap-header {
@@ -343,7 +418,7 @@
       gap: 8px;
     }
 
-    .thumb-item { text-align: center; }
+    .thumb-item { text-align: center; position: relative; }
     .thumb-img {
       width: 100%;
       aspect-ratio: 1;
@@ -351,6 +426,7 @@
       object-fit: cover;
       background: #cbd5e1;
       border: 1px solid var(--macho-yellow);
+      cursor: pointer;
     }
 
     .thumb-name {
@@ -592,7 +668,15 @@
     <section class="page-view active-view" id="profileView" aria-labelledby="navProfile">
       <aside>
         <div class="card">
-          <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80" alt="Profile avatar" class="profile-avatar" />
+          <div class="avatar-upload">
+            <label for="avatarInput">
+              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80" alt="Profile avatar" class="profile-avatar" id="profileImage" />
+            </label>
+            <input type="file" id="avatarInput" accept="image/*" onchange="uploadAvatar(event)" />
+            <div class="upload-progress" id="avatarProgress">
+              <div class="upload-progress-bar" id="avatarProgressBar"></div>
+            </div>
+          </div>
           <div class="user-name" id="userName">Guest</div>
           <div class="user-status" id="userStatus">Please log in to continue</div>
 
@@ -602,7 +686,7 @@
 
           <ul class="side-menu" aria-label="Profile sections">
             <li><a href="#"><span>Scraps</span> <span class="count-badge" id="scrapCount">2</span></a></li>
-            <li><a href="#"><span>Photos</span> <span class="count-badge">42</span></a></li>
+            <li><a href="#"><span>Photos</span> <span class="count-badge" id="photoCount">0</span></a></li>
             <li><a href="#"><span>Videos</span> <span class="count-badge">8</span></a></li>
             <li><a href="#"><span>Fans</span> <span class="count-badge">128</span></a></li>
           </ul>
@@ -624,7 +708,12 @@
           <form class="scrap-form" onsubmit="postScrap(event)">
             <label for="scrapText" class="sr-only">Leave a scrap for Alex</label>
             <textarea id="scrapText" placeholder="Leave a scrap for Alex..." required></textarea>
-            <button type="submit" class="btn-pink">Post Scrap</button>
+            <div class="scrap-form-actions">
+              <button type="button" class="btn-upload-image" onclick="document.getElementById('scrapImageInput').click()">📷 Add Image</button>
+              <button type="submit" class="btn-pink">Post Scrap</button>
+            </div>
+            <input type="file" id="scrapImageInput" accept="image/*" style="display:none;" onchange="previewScrapImage(event)" />
+            <img id="scrapImagePreview" class="scrap-image-preview" style="display:none;" alt="Preview" />
           </form>
 
           <div class="scrap-list" id="scrapList" aria-live="polite" aria-relevant="additions">
@@ -771,7 +860,7 @@
             </button>
             <button type="button" class="btn-social btn-facebook" onclick="signInWithFacebook()" id="facebookBtn">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"></path>
               </svg>
               Continue with Facebook
             </button>
@@ -807,6 +896,12 @@
       FacebookAuthProvider,
       signInWithPopup
     } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+    import {
+      getStorage,
+      ref,
+      uploadBytesResumable,
+      getDownloadURL
+    } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBLOzXhIub7Bjqp2uz5Nv0IRSpXsm2dys0",
@@ -819,6 +914,7 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const storage = getStorage(app);
 
     const googleProvider = new GoogleAuthProvider();
     const facebookProvider = new FacebookAuthProvider();
@@ -839,10 +935,12 @@
 
     const scrapList = document.getElementById('scrapList');
     const scrapCountEl = document.getElementById('scrapCount');
+    const photoCountEl = document.getElementById('photoCount');
 
     const userNameEl = document.getElementById('userName');
     const userStatusEl = document.getElementById('userStatus');
     const logoutBtn = document.getElementById('logoutBtn');
+    const profileImage = document.getElementById('profileImage');
 
     const authForm = document.getElementById('authForm');
     const authEmail = document.getElementById('authEmail');
@@ -854,48 +952,75 @@
 
     let currentMode = 'login';
     let scrapCount = Number(scrapCountEl.textContent) || 0;
+    let photoCount = Number(photoCountEl.textContent) || 0;
+    let currentScrapImageUrl = null;
 
     function setAuthMessage(text, isError = false) {
       authMessage.textContent = text;
       authMessage.style.color = isError ? '#b00020' : 'var(--macho-pink)';
     }
 
-    window.switchMainTab = function(target) {
-      const show = (view) => {
-        profileView.hidden = view !== 'profile';
-        communitiesView.hidden = view !== 'communities';
-        authView.hidden = view !== 'auth';
+    window.uploadAvatar = async function(e) {
+      if (!auth.currentUser) {
+        alert('Please log in first to upload an avatar!');
+        return;
+      }
 
-        profileView.classList.toggle('active-view', view === 'profile');
-        communitiesView.classList.toggle('active-view', view === 'communities');
-        authView.classList.toggle('active-view', view === 'auth');
+      const file = e.target.files[0];
+      if (!file) return;
 
-        navProfile.classList.toggle('active', view === 'profile');
-        navCommunities.classList.toggle('active', view === 'communities');
-        navAuth.classList.toggle('active', view === 'auth');
+      const progressDiv = document.getElementById('avatarProgress');
+      const progressBar = document.getElementById('avatarProgressBar');
+      progressDiv.classList.add('active');
 
-        navProfile.setAttribute('aria-selected', String(view === 'profile'));
-        navCommunities.setAttribute('aria-selected', String(view === 'communities'));
-        navAuth.setAttribute('aria-selected', String(view === 'auth'));
+      try {
+        const fileName = `avatars/${auth.currentUser.uid}_${Date.now()}`;
+        const storageRef = ref(storage, fileName);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            progressBar.style.width = progress + '%';
+          },
+          (error) => {
+            alert('Upload failed: ' + error.message);
+            progressDiv.classList.remove('active');
+          },
+          async () => {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            profileImage.src = downloadURL;
+            progressDiv.classList.remove('active');
+            progressBar.style.width = '0%';
+            alert('Avatar updated!');
+          }
+        );
+      } catch (error) {
+        alert('Error: ' + error.message);
+        progressDiv.classList.remove('active');
+      }
+    };
+
+    window.previewScrapImage = function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const preview = document.getElementById('scrapImagePreview');
+        preview.src = event.target.result;
+        preview.style.display = 'block';
+        currentScrapImageUrl = event.target.result;
       };
-      show(target);
+      reader.readAsDataURL(file);
     };
 
-    window.switchSubView = function(view) {
-      const showThreads = view === 'threads';
-      commList.hidden = showThreads;
-      threadsList.hidden = !showThreads;
-      tabExplore.classList.toggle('active', !showThreads);
-      tabThreads.classList.toggle('active', showThreads);
-      tabExplore.setAttribute('aria-selected', String(!showThreads));
-      tabThreads.setAttribute('aria-selected', String(showThreads));
-    };
-
-    window.postScrap = function(e) {
+    window.postScrap = async function(e) {
       e.preventDefault();
       const input = document.getElementById('scrapText');
       const text = input.value.trim();
-      if (!text) return;
+      if (!text && !currentScrapImageUrl) return;
 
       if (!auth.currentUser) {
         setAuthMessage('Please log in before posting a scrap.', true);
@@ -917,14 +1042,48 @@
       date.className = 'scrap-date';
       date.textContent = 'Just now';
 
-      const message = document.createElement('p');
-      message.textContent = text;
-
       header.append(author, date);
-      newScrap.append(header, message);
+      newScrap.appendChild(header);
+
+      // Add image if present
+      if (currentScrapImageUrl) {
+        const imageFile = document.getElementById('scrapImageInput').files[0];
+        if (imageFile) {
+          try {
+            const fileName = `scraps/${auth.currentUser.uid}/${Date.now()}_${imageFile.name}`;
+            const storageRef = ref(storage, fileName);
+            const uploadTask = uploadBytesResumable(storageRef, imageFile);
+
+            await new Promise((resolve, reject) => {
+              uploadTask.on('state_changed', null, reject, async () => {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                const img = document.createElement('img');
+                img.src = downloadURL;
+                newScrap.appendChild(img);
+                photoCount += 1;
+                photoCountEl.textContent = String(photoCount);
+                resolve();
+              });
+            });
+          } catch (error) {
+            console.error('Image upload error:', error);
+          }
+        }
+      }
+
+      // Add text if present
+      if (text) {
+        const message = document.createElement('p');
+        message.textContent = text;
+        newScrap.appendChild(message);
+      }
+
       scrapList.prepend(newScrap);
 
       input.value = '';
+      currentScrapImageUrl = null;
+      document.getElementById('scrapImagePreview').style.display = 'none';
+      document.getElementById('scrapImageInput').value = '';
       scrapCount += 1;
       scrapCountEl.textContent = String(scrapCount);
       setAuthMessage('');
@@ -998,43 +1157,70 @@
       }
     };
 
+    window.switchMainTab = function(target) {
+      const show = (view) => {
+        profileView.hidden = view !== 'profile';
+        communitiesView.hidden = view !== 'communities';
+        authView.hidden = view !== 'auth';
+
+        profileView.classList.toggle('active-view', view === 'profile');
+        communitiesView.classList.toggle('active-view', view === 'communities');
+        authView.classList.toggle('active-view', view === 'auth');
+
+        navProfile.classList.toggle('active', view === 'profile');
+        navCommunities.classList.toggle('active', view === 'communities');
+        navAuth.classList.toggle('active', view === 'auth');
+
+        navProfile.setAttribute('aria-selected', String(view === 'profile'));
+        navCommunities.setAttribute('aria-selected', String(view === 'communities'));
+        navAuth.setAttribute('aria-selected', String(view === 'auth'));
+      };
+      show(target);
+    };
+
+    window.switchSubView = function(view) {
+      const showThreads = view === 'threads';
+      commList.hidden = showThreads;
+      threadsList.hidden = !showThreads;
+      tabExplore.classList.toggle('active', !showThreads);
+      tabThreads.classList.toggle('active', showThreads);
+      tabExplore.setAttribute('aria-selected', String(!showThreads));
+      tabThreads.setAttribute('aria-selected', String(showThreads));
+    };
+
     authForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = authEmail.value.trim();
-      const password = authPassword.value.trim();
+      const email = authEmail.value;
+      const password = authPassword.value;
 
       try {
-        setAuthMessage('Please wait...');
         if (currentMode === 'login') {
           await signInWithEmailAndPassword(auth, email, password);
-          setAuthMessage('Logged in successfully.');
+          setAuthMessage(`Welcome ${email}!`);
+          switchMainTab('profile');
         } else {
           await createUserWithEmailAndPassword(auth, email, password);
-          setAuthMessage('Account created successfully.');
+          setAuthMessage('Account created! Welcome!');
+          switchMainTab('profile');
         }
-        authForm.reset();
-        switchMainTab('profile');
-      } catch (err) {
-        setAuthMessage(err.message, true);
+      } catch (error) {
+        setAuthMessage(error.message, true);
       }
     });
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        userNameEl.textContent = user.displayName || user.email || 'Signed in user';
-        userStatusEl.textContent = 'Authenticated via Firebase';
+        userNameEl.textContent = user.displayName || user.email.split('@')[0];
+        userStatusEl.textContent = 'Online';
         logoutBtn.hidden = false;
-        setAuthMessage(`Signed in as ${user.email}`);
+        navAuth.textContent = 'Logout';
       } else {
         userNameEl.textContent = 'Guest';
         userStatusEl.textContent = 'Please log in to continue';
         logoutBtn.hidden = true;
+        navAuth.textContent = 'Login';
       }
     });
-
-    switchMainTab('profile');
-    switchSubView('explore');
-    setAuthMode('login');
   </script>
 </body>
 </html>
